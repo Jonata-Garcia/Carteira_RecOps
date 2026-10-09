@@ -3860,32 +3860,50 @@ async function __gateAutenticar() {
     __gateMostrarErro("");
     btn.disabled = true;
     btn.textContent = "Entrando...";
+    let resp;
     try {
-        const resp = await fetch(__WEBHOOK_URL, {
+        resp = await fetch(__WEBHOOK_URL, {
             method: "POST",
             headers: {
                 [__SENHA_HEADER]: senha
             }
         });
+    } catch (err) {
+        console.error("[carteira] fetch falhou (rede, VPN ou CORS):", err);
+        __gateMostrarErro("Erro de conexao com o n8n. Confirme a VPN; se ja estiver nela, o bloqueio pode ser de CORS (Allowed Origins do webhook). Detalhe no console (F12).");
+        btn.disabled = false;
+        btn.textContent = "Entrar";
+        return;
+    }
+    try {
         if (resp.status === 401 || resp.status === 403) {
             __gateMostrarErro("Senha incorreta.");
             return;
         }
         if (!resp.ok) {
-            __gateMostrarErro("Nao foi possivel carregar os dados agora (erro " + resp.status + "). Tente novamente em instantes.");
+            __gateMostrarErro("O n8n respondeu com erro " + resp.status + ". Veja a execucao do webhook no n8n.");
             return;
         }
-        const json = await resp.json();
+        const texto = await resp.text();
+        let json;
+        try {
+            json = JSON.parse(texto);
+        } catch (err) {
+            console.error("[carteira] resposta nao e JSON:", texto.slice(0, 300));
+            __gateMostrarErro("O n8n respondeu, mas sem JSON valido (" + (texto ? "conteudo inesperado" : "resposta vazia") + "). Veja a execucao do webhook no n8n.");
+            return;
+        }
         const dados = json && json.dados ? json.dados : null;
         if (!dados) {
-            __gateMostrarErro("Resposta inesperada do servidor. Avise o Jonata.");
+            __gateMostrarErro("O n8n respondeu sem o campo 'dados'. O cache do OneDrive pode estar vazio ou corrompido.");
             return;
         }
         document.getElementById("gateOverlay").remove();
         document.body.classList.remove("gate-ativo");
         await __iniciarAppComDados(dados);
     } catch (err) {
-        __gateMostrarErro("Erro de conexao. Confirme que voce esta na rede/VPN da Mottu e tente novamente.");
+        console.error("[carteira] erro ao montar o dashboard:", err);
+        alert("Os dados chegaram, mas o dashboard falhou ao montar: " + (err && err.message ? err.message : err));
     } finally {
         btn.disabled = false;
         btn.textContent = "Entrar";
