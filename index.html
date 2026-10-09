@@ -1670,6 +1670,23 @@
         const gridId = btnEl.dataset.compGrid;
         if (gridId) atualizarTextoBotaoComposicao(btnEl.id, gridId);
     }
+    function rodapeQuando(ev, legado) {
+        const quando = ev.quando ? String(ev.quando) : null;
+        const dia = quando ? quando.slice(0, 10) : ev.data_evento;
+        if (!dia) return escAttr(legado || "—");
+        const hojeSP = (new Date).toLocaleDateString("en-CA", {
+            timeZone: "America/Sao_Paulo"
+        });
+        const ontemSP = new Date(Date.parse(hojeSP + "T12:00:00Z") - 864e5).toISOString().slice(0, 10);
+        const rotulo = dia === hojeSP ? "Hoje" : dia === ontemSP ? "Ontem" : dia.slice(8, 10) + "/" + dia.slice(5, 7);
+        return quando ? `${rotulo} ${quando.slice(11, 16)}` : `${rotulo} · sem hora`;
+    }
+    function rodapeResumo(ev, legadoHTML) {
+        if (!ev.motivo_label && !ev.o_que_aconteceu) return legadoHTML;
+        const motivo = ev.motivo_label ? `<strong>${escAttr(ev.motivo_label)}</strong>` : "";
+        const oque = ev.o_que_aconteceu ? `O que aconteceu: ${escAttr(ev.o_que_aconteceu)}` : "";
+        return [ motivo, oque ].filter(Boolean).join("<br>");
+    }
     function renderSaidas() {
         const saidasSituacao = SAIDAS.filter(s => s.motivo !== "150dias");
         const saidas150 = SAIDAS.filter(s => s.motivo === "150dias");
@@ -1682,7 +1699,7 @@
             emptySituacao.style.display = "block";
         } else {
             emptySituacao.style.display = "none";
-            gridSituacao.innerHTML = saidasSituacao.map(s => `\n      <div class="nota-card">\n        <div class="nota-head">\n          <div class="nota-plate-row"><strong class="nota-plate-saida">${s.placa}</strong><span class="uf-tag">${s.uf}</span><span class="inad-tag">${s.dias_inadimplencia != null ? s.dias_inadimplencia + "d" : "—"}</span></div>\n          <span class="nota-dias recente">${s.data_saida}</span>\n        </div>\n        <div class="nota-body">\n          <p class="nota-resumo">Mudou de <strong>${s.situacao_anterior}</strong> para <strong>${s.situacao_nova}</strong>.</p>\n        </div>\n      </div>\n    `).join("");
+            gridSituacao.innerHTML = saidasSituacao.map(s => `\n      <div class="nota-card">\n        <div class="nota-head">\n          <div class="nota-plate-row"><strong class="nota-plate-saida">${s.placa}</strong><span class="uf-tag">${s.uf}</span><span class="inad-tag">${s.dias_inadimplencia != null ? s.dias_inadimplencia + "d" : "—"}</span></div>\n          <span class="nota-dias recente">${rodapeQuando(s, s.data_saida)}</span>\n        </div>\n        <div class="nota-body">\n          <p class="nota-resumo">${rodapeResumo(s, `Mudou de <strong>${s.situacao_anterior}</strong> para <strong>${s.situacao_nova}</strong>.`)}</p>\n        </div>\n      </div>\n    `).join("");
         }
         const grid150 = document.getElementById("saidas150Grid");
         const empty150 = document.getElementById("saidas150Empty");
@@ -1693,7 +1710,7 @@
             empty150.style.display = "block";
         } else {
             empty150.style.display = "none";
-            grid150.innerHTML = saidas150.map(s => `\n      <div class="nota-card">\n        <div class="nota-head">\n          <div class="nota-plate-row"><strong class="nota-plate-saida-150">${s.placa}</strong><span class="uf-tag">${s.uf}</span><span class="inad-tag">${s.dias_inadimplencia != null ? s.dias_inadimplencia + "d" : "—"}</span></div>\n          <span class="nota-dias recente">${s.data_saida}</span>\n        </div>\n        <div class="nota-body">\n          <p class="nota-resumo">Completou 150 dias de inadimplência (<strong>${s.situacao_anterior}</strong> → <strong>${s.situacao_nova}</strong>).</p>\n        </div>\n      </div>\n    `).join("");
+            grid150.innerHTML = saidas150.map(s => `\n      <div class="nota-card">\n        <div class="nota-head">\n          <div class="nota-plate-row"><strong class="nota-plate-saida-150">${s.placa}</strong><span class="uf-tag">${s.uf}</span><span class="inad-tag">${s.dias_inadimplencia != null ? s.dias_inadimplencia + "d" : "—"}</span></div>\n          <span class="nota-dias recente">${rodapeQuando(s, s.data_saida)}</span>\n        </div>\n        <div class="nota-body">\n          <p class="nota-resumo">${rodapeResumo(s, `Completou 150 dias de inadimplência (<strong>${s.situacao_anterior}</strong> → <strong>${s.situacao_nova}</strong>).`)}</p>\n        </div>\n      </div>\n    `).join("");
         }
         atualizarTextoBotaoComposicao("saidasSituacaoToggleBtn", "saidasSituacaoGrid");
         atualizarTextoBotaoComposicao("saidas150ToggleBtn", "saidas150Grid");
@@ -1715,7 +1732,7 @@
         grid.innerHTML = ENTRADAS.map(e => {
             const viaGestores = !!(DATA_BY_PLACA[e.placa] && DATA_BY_PLACA[e.placa].aprovadaViaSolicitacaoGestores);
             const origemTexto = viaGestores ? ORIGEM_SOLICITACAO_GESTORES_TEXTO : e.origem;
-            return `\n    <div class="nota-card">\n      <div class="nota-head">\n        <div class="nota-plate-row"><strong class="nota-plate-entrada">${e.placa}</strong><span class="uf-tag">${e.uf}</span><span class="inad-tag">${e.dias_inadimplencia != null ? e.dias_inadimplencia + "d" : "—"}</span></div>\n        <span class="nota-dias recente">${e.data_entrada}</span>\n      </div>\n      <div class="nota-body">\n        <p class="nota-resumo">${origemTexto}</p>\n      </div>\n    </div>\n  `;
+            return `\n    <div class="nota-card">\n      <div class="nota-head">\n        <div class="nota-plate-row"><strong class="nota-plate-entrada">${e.placa}</strong><span class="uf-tag">${e.uf}</span><span class="inad-tag">${e.dias_inadimplencia != null ? e.dias_inadimplencia + "d" : "—"}</span></div>\n        <span class="nota-dias recente">${rodapeQuando(e, e.data_entrada)}</span>\n      </div>\n      <div class="nota-body">\n        <p class="nota-resumo">${rodapeResumo(e, origemTexto)}</p>\n      </div>\n    </div>\n  `;
         }).join("");
         atualizarTextoBotaoComposicao("entradasToggleBtn", "entradasGrid");
     }
